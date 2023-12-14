@@ -1,8 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 def read_file(file):
-    with open(file, 'rb') as file:
+    with open(f"/data/gabriel/{file}", 'rb') as file:
         layers = int.from_bytes(file.read(4), byteorder='little')
         n = int.from_bytes(file.read(4), byteorder='little')
         m = int.from_bytes(file.read(4), byteorder='little')
@@ -12,13 +12,12 @@ def read_file(file):
     return np.reshape(matrices, (layers, n, m))
 
 def write_matrices(name, matrices):
-    # Sample data
     layers = matrices.shape[0]
     n = matrices.shape[1]
     m = matrices.shape[2]
 
     # Writing data to a binary file
-    with open(name, 'wb') as file:
+    with open(f"/data/gabriel/{name}", 'wb') as file:
         # Writing integers
         file.write(layers.to_bytes(4, byteorder='little'))  # Assuming 4 bytes for an integer
         file.write(n.to_bytes(4, byteorder='little'))
@@ -26,6 +25,14 @@ def write_matrices(name, matrices):
 
         # Writing NumPy array as binary data
         matrices.tofile(file)
+
+def write_matrix(name, matrices):
+    i = 0
+    name = name.replace(".", "_")
+    for matrix in matrices:
+        i += 1
+        with open(f"/data/gabriel/{name}/{i}", "wb") as file:
+            matrix.tofile(file)
 
 """
 input:
@@ -50,6 +57,7 @@ def get_freqpairs(matrices):
     for layer in range(matrices.shape[0]):
         for i in range(matrices.shape[1]):
             for j in range(matrices.shape[2] - 1):
+                pairs += 1
                 pair = [matrices[layer][i][j], matrices[layer][i][j + 1]]
                 if str(pair) not in count.keys():
                     count[str(pair)] = 0
@@ -84,13 +92,18 @@ def graph_information(name, matrices, k=100, data_file=True, unique =True, pairs
                 file.write(f"{x} {y}\n")
             file.close()
         print(f"all unique values:")
+        """
         plt.scatter(x = unique.keys(), y = unique.values(), s = 2)
         plt.show()
+        """
         k = 100
         print(f"Unique values where freq[x] > {k} {len([key for key in unique.keys() if unique[key] >= k])}")
+        print(f"Cumulative sum freq[x] > {k} {sum([value for value in unique.values() if value >= k])}")
+        """
         plt.scatter(x = [key for key in unique.keys() if unique[key] >= k],
                     y = [value for value in unique.values() if value >= k], s = 2)
         plt.show()
+        """
         if data_file:
             file = open(f"{name_file}-unique-values-{k}", "w")
             for x, y in [(key, value) for key, value in unique.items() if value >= k]:
@@ -101,4 +114,9 @@ def graph_information(name, matrices, k=100, data_file=True, unique =True, pairs
     if pairs:
         amount_pair, unique_pairs = get_freqpairs(matrices)
         print(f"Amount of pairs: {amount_pair}")
-        print(f"Amount of unique pairs: {amount_unique_pair}")
+        print(f"Amount of unique pairs: {len(unique_pairs)}")
+
+
+types = ["attn.c_attn", "attn.c_proj", "mlp.c_fc", "mlp.c_proj"]
+for type_ in types:
+    graph_information(type_, read_file(type_), data_file = False, unique = True, pairs = False)
